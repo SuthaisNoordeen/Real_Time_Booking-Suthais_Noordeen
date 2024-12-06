@@ -1,0 +1,48 @@
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f5f5f5;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+}
+
+.header {
+  background-color: #0078d4;
+  color: white;
+  padding: 20px;
+}
+
+.app-container {
+  margin: 20px;
+}
+
+.role-selection {
+  margin-top: 30px;
+}
+
+.role-button, .action-button {
+  margin: 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #0078d4;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.role-button:hover, .action-button:hover {
+  background-color: #0056a3;
+}
+
+.input-field {
+  padding: 10px;
+  font-size: 16px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.actions-container {
+  margin-top: 20px;
+}

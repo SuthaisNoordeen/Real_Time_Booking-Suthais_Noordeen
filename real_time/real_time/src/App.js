@@ -1,21 +1,19 @@
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import Home from './Home';
-import VendorSignUp from './VendorSignUp';
-import CustomerSignUp from './CustomerSignUp';
-import './App.css';
+import React from "react";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import HomePage from "./components/HomePage.js";  // Add .js extension here
+import CustomerActions from "./components/CustomerActions.js";  // Add .js extension here
+import VendorActions from "./components/VendorActions.js";  // Add .js extension here
 
-const App = () => {
-  return (
-      <Router>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/vendor" element={<VendorSignUp />} />
-          <Route path="/customer" element={<CustomerSignUp />} />
-          <Route path="*" element={<div>Page not found. Please check the URL.</div>} />
-        </Routes>
-      </Router>
-  );
-};
+function App() {
+    return (
+        <Router>
+            <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/customer" element={<CustomerActions />} />
+                <Route path="/vendor" element={<VendorActions />} />
+            </Routes>
+        </Router>
+    );
+}
 
 export default App;
