@@ -1,4 +1,3 @@
-
 class Customer implements Runnable {
     private final int customerId;
     private final TicketPool ticketPool;

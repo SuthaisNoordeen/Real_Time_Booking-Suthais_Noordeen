@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { releaseTickets, getAvailableTickets } from "../api/ticketService.js";
+import { releaseTickets, getAvailableTickets, startTicketingProcess } from "../api/ticketService.js"; // Add startTicketingProcess to API functions
 
 const VendorPage = () => {
-    const [releaseCount, setReleaseCount] = useState(1);
+    const [releaseCount, setReleaseCount] = useState(1);  // Default to 1 ticket
     const [availableTickets, setAvailableTickets] = useState(null);
-    const [message, setMessage] = useState(""); // For displaying messages
+    const [totalTickets, setTotalTickets] = useState(0);
+    const [ticketReleaseRate, setTicketReleaseRate] = useState(1);  // Tickets per second
+    const [customerRetrievalRate, setCustomerRetrievalRate] = useState(1);  // Customers per second
+    const [maxCapacity, setMaxCapacity] = useState(5);  // Max ticket capacity
+    const [message, setMessage] = useState(""); // Message for success/error
+    const [isStarted, setIsStarted] = useState(false); // Track if the process has started
 
     // Fetch available tickets when the component mounts
     useEffect(() => {
@@ -18,8 +23,9 @@ const VendorPage = () => {
         };
 
         fetchTickets();
-    }, []);  // Runs once when the component mounts
+    }, []);  // Empty dependency array ensures this runs once after component mounts
 
+    // Handle release action
     const handleRelease = async () => {
         if (releaseCount <= 0) {
             setMessage("Please enter a valid number of tickets to release.");
@@ -36,63 +42,187 @@ const VendorPage = () => {
         }
     };
 
+    // Start the ticketing process (Release and buy tickets automatically)
+    const handleStart = async () => {
+        if (totalTickets <= 0 || ticketReleaseRate <= 0 || customerRetrievalRate <= 0) {
+            setMessage("Please enter valid values for all fields.");
+            return;
+        }
+
+        try {
+            // Send configuration to backend to start the process
+            const config = {
+                totalTickets,
+                ticketReleaseRate,
+                customerRetrievalRate,
+                maxCapacity,
+            };
+
+            await startTicketingProcess(config);
+            setMessage("Ticketing process started successfully.");
+            setIsStarted(true);  // Mark the process as started
+        } catch (error) {
+            setMessage("Error starting ticketing process: " + error.message);
+        }
+    };
+
     return (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px", fontFamily: "Arial, sans-serif", backgroundColor: "#f5f5f5", minHeight: "100vh" }}>
-            <h1 style={{ fontSize: "36px", color: "#0078d4", fontWeight: "bold", marginBottom: "30px" }}>Vendor Ticket Management</h1>
+        <div style={styles.container}>
+            <h2 style={styles.title}>Vendor Ticket Management</h2>
 
-            <div style={{ backgroundColor: "white", padding: "40px", borderRadius: "12px", boxShadow: "0 8px 16px rgba(0, 0, 0, 0.1)", width: "100%", maxWidth: "450px" }}>
-                <p style={{ fontSize: "18px", color: "#333", marginBottom: "20px" }}>
-                    Available Tickets: {availableTickets !== null ? availableTickets : "Loading..."}
-                </p>
+            <div style={styles.formContainer}>
+                <p style={styles.ticketCount}>Available Tickets: {availableTickets !== null ? availableTickets : "Loading..."}</p>
+                <p style={styles.ticketCount}>Total Tickets: {totalTickets !== null ? totalTickets : "Loading..."}</p>
 
-                <div style={{ marginBottom: "20px" }}>
-                    <label htmlFor="releaseCount" style={{ fontSize: "16px", color: "#333", marginBottom: "10px", display: "block" }}>
-                        Number of Tickets to Release:
-                    </label>
+                {message && <p style={message.includes("success") ? styles.successMessage : styles.errorMessage}>{message}</p>}
+
+                <div style={styles.inputContainer}>
+                    <label htmlFor="releaseCount" style={styles.inputLabel}>Tickets to Release: </label>
                     <input
                         type="number"
                         id="releaseCount"
                         min="1"
                         value={releaseCount}
-                        onChange={(e) => setReleaseCount(parseInt(e.target.value))}
-                        style={{
-                            width: "100%",
-                            padding: "12px",
-                            fontSize: "16px",
-                            border: "1px solid #ccc",
-                            borderRadius: "8px",
-                            marginBottom: "25px",
-                            boxSizing: "border-box",
-                        }}
+                        onChange={(e) => setReleaseCount(Math.max(1, parseInt(e.target.value)))}
+                        style={styles.inputField}
                     />
                 </div>
 
-                <button
-                    onClick={handleRelease}
-                    style={{
-                        width: "100%",
-                        padding: "15px",
-                        backgroundColor: "#0078d4",
-                        color: "white",
-                        fontSize: "18px",
-                        border: "none",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                        transition: "background-color 0.3s ease",
-                        fontWeight: "bold",
-                    }}
-                >
+                <div style={styles.inputContainer}>
+                    <label htmlFor="ticketReleaseRate" style={styles.inputLabel}>Ticket Release Rate (tickets/sec): </label>
+                    <input
+                        type="number"
+                        id="ticketReleaseRate"
+                        min="1"
+                        value={ticketReleaseRate}
+                        onChange={(e) => setTicketReleaseRate(parseInt(e.target.value))}
+                        style={styles.inputField}
+                    />
+                </div>
+
+                <div style={styles.inputContainer}>
+                    <label htmlFor="customerRetrievalRate" style={styles.inputLabel}>Customer Retrieval Rate (tickets/sec): </label>
+                    <input
+                        type="number"
+                        id="customerRetrievalRate"
+                        min="1"
+                        value={customerRetrievalRate}
+                        onChange={(e) => setCustomerRetrievalRate(parseInt(e.target.value))}
+                        style={styles.inputField}
+                    />
+                </div>
+
+                <div style={styles.inputContainer}>
+                    <label htmlFor="maxCapacity" style={styles.inputLabel}>Maximum Ticket Capacity: </label>
+                    <input
+                        type="number"
+                        id="maxCapacity"
+                        min="1"
+                        value={maxCapacity}
+                        onChange={(e) => setMaxCapacity(parseInt(e.target.value))}
+                        style={styles.inputField}
+                    />
+                </div>
+
+                <button onClick={handleRelease} style={styles.releaseButton}>
                     Release Tickets
                 </button>
 
-                {message && (
-                    <p style={{ marginTop: "20px", color: message.includes("successfully") ? "green" : "red", fontSize: "16px", textAlign: "center" }}>
-                        {message}
-                    </p>
-                )}
+                <button onClick={handleStart} style={styles.startButton} disabled={isStarted}>
+                    {isStarted ? "Process Started" : "Start Ticketing Process"}
+                </button>
             </div>
         </div>
     );
+};
+
+// Inline styles for the component
+const styles = {
+    container: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "20px",
+        fontFamily: "'Arial', sans-serif",
+        backgroundColor: "#f5f5f5",  // Light gray background
+        minHeight: "100vh",
+    },
+    title: {
+        fontSize: "36px",
+        color: "#0078d4",
+        fontWeight: "bold",
+        marginBottom: "30px",
+        textAlign: "center",
+    },
+    formContainer: {
+        backgroundColor: "white",
+        padding: "40px",
+        borderRadius: "12px",
+        boxShadow: "0 8px 16px rgba(0, 0, 0, 0.1)",
+        width: "100%",
+        maxWidth: "450px",
+    },
+    ticketCount: {
+        fontSize: "18px",
+        color: "#333",
+        marginBottom: "20px",
+    },
+    successMessage: {
+        color: "green",
+        fontWeight: "bold",
+        fontSize: "18px",
+        marginBottom: "20px",
+    },
+    errorMessage: {
+        color: "red",
+        fontWeight: "bold",
+        fontSize: "18px",
+        marginBottom: "20px",
+    },
+    inputContainer: {
+        marginBottom: "20px",
+    },
+    inputLabel: {
+        fontSize: "16px",
+        color: "#333",
+        marginBottom: "10px",
+        display: "block",
+    },
+    inputField: {
+        width: "100%",
+        padding: "12px",
+        fontSize: "16px",
+        border: "1px solid #ccc",
+        borderRadius: "8px",
+        marginBottom: "25px",
+        boxSizing: "border-box",
+    },
+    releaseButton: {
+        width: "100%",
+        padding: "15px",
+        backgroundColor: "#0078d4",
+        color: "white",
+        fontSize: "18px",
+        border: "none",
+        borderRadius: "8px",
+        cursor: "pointer",
+        transition: "background-color 0.3s ease",
+        fontWeight: "bold",
+    },
+    startButton: {
+        width: "100%",
+        padding: "15px",
+        backgroundColor: "#28a745",
+        color: "white",
+        fontSize: "18px",
+        border: "none",
+        borderRadius: "8px",
+        cursor: "pointer",
+        transition: "background-color 0.3s ease",
+        fontWeight: "bold",
+        marginTop: "20px",
+    },
 };
 
 export default VendorPage;

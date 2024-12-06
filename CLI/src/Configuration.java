@@ -10,6 +10,4 @@ class Configuration {
         this.customerRetrievalRate = customerRetrievalRate;
         this.maxTicketCapacity = maxTicketCapacity;
     }
-
-    // Getters and setters can be added here if needed
 }

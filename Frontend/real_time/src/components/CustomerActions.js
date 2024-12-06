@@ -66,14 +66,6 @@ const CustomerActions = ({ resetRole }) => {
         width: "100%",
         boxSizing: "border-box",  // Ensure padding doesn't mess up with the width
     };
-
-    const messageStyle = {
-        fontSize: "16px",
-        fontWeight: "bold",
-        color: "#333",
-        marginTop: "20px",
-    };
-
     return (
         <div className="customer-actions" style={{ display: "flex", flexDirection: "column", gap: "20px", textAlign: "center", maxWidth: "500px", margin: "0 auto" }}>
             <h2 style={{ color: "#0078d4" }}>Customer Actions</h2>
