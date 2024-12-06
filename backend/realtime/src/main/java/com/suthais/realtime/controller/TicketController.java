@@ -1,10 +1,13 @@
 package com.suthais.realtime.controller;
 
 import com.suthais.realtime.services.TicketService;
-import com.suthais.realtime.model.TicketingConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/tickets")
@@ -18,15 +21,7 @@ public class TicketController {
         this.ticketService = ticketService;
     }
 
-    // Start ticketing process with configuration
-    @PostMapping("/start")
-    public ResponseEntity<String> startTicketingProcess(@RequestBody TicketingConfig config) {
-        // Delegate the logic to the TicketService
-        ticketService.startTicketingProcess(config);
-        return ResponseEntity.ok("Ticketing process started successfully.");
-    }
-
-    // Get the current available tickets
+    // Get available tickets and total tickets (Updated to return JSON)
     @GetMapping
     public ResponseEntity<?> getAvailableTickets() {
         int availableTickets = ticketService.getAvailableTickets();
@@ -38,10 +33,38 @@ public class TicketController {
     @PostMapping("/release")
     public ResponseEntity<String> releaseTickets(@RequestParam int count) {
         ticketService.releaseTickets(count);
-        return ResponseEntity.ok("Released " + count + " tickets.");
+        int availableTickets = ticketService.getAvailableTickets();  // Get the updated available tickets
+        int totalTickets = ticketService.getTotalTickets();  // Get the updated total tickets
+        // Return the updated ticket counts in the response
+        return ResponseEntity.ok("Released " + count + " tickets. Available Tickets: " + availableTickets + ", Total Tickets: " + totalTickets);
     }
 
-    // Inner class for ticket response structure
+
+    // Buy tickets and save the purchase info to a file
+    @PostMapping("/buy")
+    public String buyTickets(@RequestParam String customerName, @RequestParam int count) {
+        String message = ticketService.buyTickets(customerName, count);
+
+        // Save the ticket purchase details to a file after successful purchase
+        if (message.contains("successfully bought")) {
+            saveTicketPurchaseToFile(customerName, count);
+        }
+
+        return message;
+    }
+
+    // Save ticket purchase details to a text file
+    private void saveTicketPurchaseToFile(String customerName, int count) {
+        String filePath = "ticket_purchases.txt";  // Path where the file will be saved
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath, true))) {
+            writer.write("Customer: " + customerName + ", Tickets Bought: " + count + "\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Inner class for JSON response structure
     public static class TicketResponse {
         private int available;
         private int total;
