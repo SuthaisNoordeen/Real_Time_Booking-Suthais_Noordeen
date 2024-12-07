@@ -1,146 +1,158 @@
 import React, { useState, useEffect } from "react";
-import { releaseTickets, getAvailableTickets } from "../api/ticketService.js";
+import { buyTicket, getAvailableTickets } from "../api/ticketService.jsx";
 
-const VendorActions = () => {
-    const [releaseCount, setReleaseCount] = useState(1);  // Default to 1 ticket
-    const [availableTickets, setAvailableTickets] = useState(0);  // Initialize available tickets to 0
-    const [totalTickets, setTotalTickets] = useState(0);  // Initialize total tickets to 0
-    const [successMessage, setSuccessMessage] = useState("");  // Success message after releasing tickets
-    const [errorMessage, setErrorMessage] = useState("");  // Error message if something goes wrong
+const CustomerActions = () => {
+    const [availableTickets, setAvailableTickets] = useState(0);  // Available tickets state
+    const [isPurchasing, setIsPurchasing] = useState(false); // Flag to control auto-purchase
+    const [purchaseHistory, setPurchaseHistory] = useState([]); // Purchase history
+    const [successMessage, setSuccessMessage] = useState(""); // Success message
+    const [errorMessage, setErrorMessage] = useState(""); // Error message
 
     useEffect(() => {
         // Fetch available tickets when the component mounts
         const fetchTickets = async () => {
             try {
-                const tickets = await getAvailableTickets();  // Fetch the available tickets from the backend
-                setAvailableTickets(tickets.available);  // Update state with available tickets
-                setTotalTickets(tickets.total);  // Update state with total tickets
+                const tickets = await getAvailableTickets();  // Fetch available tickets from the backend
+                setAvailableTickets(tickets);  // Update state with available tickets
             } catch (error) {
                 console.error("Error fetching available tickets:", error);
             }
         };
 
         fetchTickets();  // Fetch available tickets when the component mounts
-    }, []);  // Empty dependency array ensures this runs once after component mounts
 
-    const handleRelease = async () => {
-        if (releaseCount <= 0) {
-            setErrorMessage("Cannot release 0 or negative tickets.");
-            return;
+        // Auto-buy tickets if isPurchasing is true
+        let autoPurchaseInterval;
+        if (isPurchasing) {
+            autoPurchaseInterval = setInterval(() => {
+                if (availableTickets > 0) {
+                    const customerName = `Customer-${Math.floor(Math.random() * 1000)}`;  // Random customer name
+                    handleBuy(customerName);  // Trigger the purchase
+                }
+            }, 2000);  // Every 2 seconds
+        } else {
+            clearInterval(autoPurchaseInterval);  // Stop auto-buying if isPurchasing is false
+        }
+
+        return () => clearInterval(autoPurchaseInterval);  // Cleanup on component unmount
+    }, [availableTickets, isPurchasing]);  // Re-run when availableTickets or isPurchasing changes
+
+    // Handle ticket purchase
+    const handleBuy = async (customerName) => {
+        if (availableTickets <= 0) {
+            setErrorMessage("No tickets available.");
+            return;  // If no tickets are available, do not proceed with purchase
         }
 
         try {
-            // Call the backend API to release tickets
-            const message = await releaseTickets(releaseCount);
+            const message = await buyTicket(customerName, 1); // Auto-generate customer name
+
+            // Update available tickets and purchase history
+            const tickets = await getAvailableTickets();
+            setAvailableTickets(tickets);
             setSuccessMessage(message);  // Show success message
             setErrorMessage("");  // Clear error message
-            // Fetch updated available tickets after releasing
-            const tickets = await getAvailableTickets();
-            setAvailableTickets(tickets.available);  // Update available tickets state
-            setTotalTickets(tickets.total);  // Update total tickets state
+
+            // Record the purchase in history
+            setPurchaseHistory((prevHistory) => [
+                ...prevHistory,
+                `${customerName} purchased 1 ticket. Tickets left: ${tickets}`
+            ]);
         } catch (error) {
-            setErrorMessage("Error releasing tickets: " + error.message);  // Show error message if request fails
+            setErrorMessage("Error buying tickets: " + error.message);  // Show error message
         }
+    };
+
+    // Start auto-purchasing
+    const startAutoPurchase = () => {
+        setIsPurchasing(true); // Enable auto-purchase
+        setSuccessMessage("Auto-purchase started.");
+    };
+
+    // Stop auto-purchasing
+    const stopAutoPurchase = () => {
+        setIsPurchasing(false); // Disable auto-purchase
+        setSuccessMessage("Auto-purchase stopped.");
     };
 
     return (
         <div style={styles.container}>
-            <h2 style={styles.title}>Vendor Actions</h2>
+            <h2 style={styles.title}>Customer Ticket Purchase</h2>
 
             <div style={styles.formContainer}>
-                <p style={styles.ticketCount}>Available Tickets: {availableTickets !== null ? availableTickets : "Loading..."}</p>
-                <p style={styles.ticketCount}>Total Tickets: {totalTickets !== null ? totalTickets : "Loading..."}</p>
+                <p style={styles.availableTickets}>Available Tickets: {availableTickets !== null ? availableTickets : "Loading..."}</p>
 
                 {successMessage && <p style={styles.successMessage}>{successMessage}</p>}
                 {errorMessage && <p style={styles.errorMessage}>{errorMessage}</p>}
 
-                <div style={styles.inputContainer}>
-                    <label htmlFor="releaseCount" style={styles.inputLabel}>Tickets to Release: </label>
-                    <input
-                        type="number"
-                        id="releaseCount"
-                        min="1"
-                        value={releaseCount}
-                        onChange={(e) => setReleaseCount(Math.max(1, parseInt(e.target.value)))}
-                        style={styles.inputField}
-                    />
-                </div>
+                {/* Start and Stop Auto Purchase Buttons */}
+                {!isPurchasing ? (
+                    <button onClick={startAutoPurchase} style={styles.button}>Start Auto Purchase</button>
+                ) : (
+                    <button onClick={stopAutoPurchase} style={styles.button}>Stop Auto Purchase</button>
+                )}
 
-                <button
-                    onClick={handleRelease}
-                    style={styles.releaseButton}
-                    disabled={releaseCount <= 0}  // Disable if invalid release count
-                >
-                    Release Tickets
-                </button>
+                <h3 style={styles.historyTitle}>Purchase History</h3>
+                <ul style={styles.historyList}>
+                    {purchaseHistory.length > 0 ? (
+                        purchaseHistory.map((history, index) => (
+                            <li key={index} style={styles.historyItem}>{history}</li>
+                        ))
+                    ) : (
+                        <li style={styles.historyItem}>No purchases made yet.</li>
+                    )}
+                </ul>
             </div>
         </div>
     );
 };
 
-// Inline styles for the component
+// Inline CSS styles
 const styles = {
     container: {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "20px",
-        fontFamily: "'Arial', sans-serif",
-        backgroundColor: "#f5f5f5",  // Light gray background
         minHeight: "100vh",
+        backgroundColor: "#f0f8ff",  // Light background color
+        fontFamily: "'Arial', sans-serif",
+        padding: "20px",
     },
     title: {
-        fontSize: "36px",
+        fontSize: "32px",
         color: "#0078d4",
         fontWeight: "bold",
-        marginBottom: "30px",
+        marginBottom: "20px",
         textAlign: "center",
     },
     formContainer: {
-        backgroundColor: "white",
-        padding: "40px",
+        backgroundColor: "#fff",
+        padding: "30px",
         borderRadius: "12px",
-        boxShadow: "0 8px 16px rgba(0, 0, 0, 0.1)",
+        boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
         width: "100%",
-        maxWidth: "450px",
+        maxWidth: "500px",
+        textAlign: "center",
     },
-    ticketCount: {
+    availableTickets: {
         fontSize: "18px",
         color: "#333",
-        marginBottom: "20px",
+        marginBottom: "15px",
     },
     successMessage: {
         color: "green",
         fontWeight: "bold",
-        fontSize: "18px",
+        fontSize: "16px",
         marginBottom: "20px",
     },
     errorMessage: {
         color: "red",
         fontWeight: "bold",
-        fontSize: "18px",
+        fontSize: "16px",
         marginBottom: "20px",
     },
-    inputContainer: {
-        marginBottom: "20px",
-    },
-    inputLabel: {
-        fontSize: "16px",
-        color: "#333",
-        marginBottom: "10px",
-        display: "block",
-    },
-    inputField: {
-        width: "100%",
-        padding: "12px",
-        fontSize: "16px",
-        border: "1px solid #ccc",
-        borderRadius: "8px",
-        marginBottom: "25px",
-        boxSizing: "border-box",
-    },
-    releaseButton: {
+    button: {
         width: "100%",
         padding: "15px",
         backgroundColor: "#0078d4",
@@ -151,7 +163,22 @@ const styles = {
         cursor: "pointer",
         transition: "background-color 0.3s ease",
         fontWeight: "bold",
+        marginBottom: "20px",
+    },
+    historyTitle: {
+        fontSize: "18px",
+        color: "#0078d4",
+        marginBottom: "10px",
+    },
+    historyList: {
+        listStyleType: "none",
+        paddingLeft: "0",
+    },
+    historyItem: {
+        fontSize: "16px",
+        color: "#333",
+        marginBottom: "10px",
     },
 };
 
-export default VendorActions;
+export default CustomerActions;

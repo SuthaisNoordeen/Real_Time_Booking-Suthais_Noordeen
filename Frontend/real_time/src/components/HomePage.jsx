@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import '../components/HomePage.css'; // Import the CSS for styling
+import '../components/HomePage.css';
 
 const HomePage = () => (
     <div className="homepage-container">
